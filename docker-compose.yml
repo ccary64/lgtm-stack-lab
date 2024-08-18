@@ -1,0 +1,54 @@
+services:
+  alloy:
+    image: grafana/alloy:latest
+    command: run --server.http.listen-addr 0.0.0.0:12345 /etc/alloy/config.alloy
+    ports:
+      - 12345:12345
+    volumes:
+      - ./configs/config.alloy:/etc/alloy/config.alloy
+  loki:
+    image: grafana/loki:2.9.2
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ./volumes/loki:/loki
+  promtail:
+    image: grafana/promtail:2.9.2
+    volumes:
+      - ./configs/promtail-config.yaml:/etc/promtail/config.yml
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/lib/docker/containers:/var/lib/docker/containers
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+    volumes:
+      - ./volumes/grafana:/var/lib/grafana
+      - ./configs/grafana-sources.yml:/etc/grafana/provisioning/datasources/config.yml
+  prometheus:
+    image: prom/prometheus
+    command: --web.enable-remote-write-receiver --config.file=/etc/prometheus/prometheus.yml
+    container_name: airflow-prometheus
+    user: "0"
+    ports:
+        - 9090:9090
+    volumes:
+      - ./configs/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./volumes/prometheus:/prometheus
+  tempo:
+    image: grafana/tempo:latest
+    command: [ "-config.file=/etc/tempo.yaml" ]
+    volumes:
+      - ./configs/tempo.yml:/etc/tempo.yaml
+      - ./volumes/tempo:/var/tempo
+    ports:
+      - "14268"  # jaeger ingest
+      - "3200"   # tempo
+      - "4317"  # otlp grpc
+      - "4318"  # otlp http
+      - "9411"   # zipkin

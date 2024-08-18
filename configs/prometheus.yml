@@ -1,0 +1,15 @@
+global:
+    scrape_interval: 30s
+    evaluation_interval: 30s
+    scrape_timeout: 10s
+    external_labels:
+        monitor: 'airflow'
+
+remote_write:
+  - url: "http://0.0.0.0:9090/api/v1/write"
+
+    write_relabel_configs:
+      # drop specific metrics from remote-write
+    - source_labels: ['__name__']
+      regex: 'go_gc_.*'
+      action: 'drop'
